@@ -34,6 +34,7 @@ namespace Xenial.Commentator.Api
             services.AddHttpClient(nameof(PushChangesWorker));
             services.AddHttpClient(nameof(CommentsController));
             services.AddSingleton<ConcurrentQueue<Page>>();
+            services.AddCors();
             services.AddControllers();
             services.AddSwaggerGen(c =>
             {
@@ -52,6 +53,12 @@ namespace Xenial.Commentator.Api
             }
 
             app.UseHttpsRedirection();
+
+            app.UseCors(b => b
+                .AllowAnyOrigin()
+                .AllowAnyMethod()
+                .AllowAnyHeader()
+            );
 
             app.UseRouting();
 

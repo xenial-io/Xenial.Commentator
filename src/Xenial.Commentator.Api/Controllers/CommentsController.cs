@@ -114,9 +114,13 @@ namespace Xenial.Commentator.Api.Controllers
 
     public class CaptchaModel
     {
+        [Required]
         public int A { get; set; }
+        [Required]
         public int B { get; set; }
+        [Required]
         public string Operation { get; set; }
+        [Required]
         public string Text { get; set; }
     }
 
@@ -124,6 +128,7 @@ namespace Xenial.Commentator.Api.Controllers
     {
         [Required]
         public string Id { get; set; }
+        [Required]
         public string Name { get; set; }
         public string GithubOrEmail { get; set; }
         [Required]
