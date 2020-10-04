@@ -55,7 +55,8 @@ namespace Xenial.Commentator.Api.Controllers
                         Content = StringHelper.StripMarkdownTags(pageInput.Content),
                         GithubOrEmail = pageInput.GithubOrEmail,
                         Name = pageInput.Name,
-                        Date = DateTime.Now
+                        Homepage = pageInput.Homepage,
+                        Date = DateTime.Now,
                     }
                 }
             });
@@ -81,9 +82,9 @@ namespace Xenial.Commentator.Api.Controllers
             {
                 AvatarUrl = avatarUrl,
                 Content = StringHelper.StripMarkdownTags(pageInput.Content),
-                GithubOrEmail = pageInput.GithubOrEmail,
                 Name = pageInput.Name,
-                Date = DateTime.Now
+                Date = DateTime.Now,
+                Homepage = pageInput.Homepage,
             });
 
             return Ok(page);
@@ -131,6 +132,7 @@ namespace Xenial.Commentator.Api.Controllers
         [Required]
         public string Name { get; set; }
         public string GithubOrEmail { get; set; }
+        public string Homepage { get; set; }
         [Required]
         public string Content { get; set; }
 

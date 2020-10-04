@@ -73,7 +73,7 @@ namespace Xenial.Commentator.BackgroundWorkers
                     {
                         comment.Content = StringHelper.StripMarkdownTags(comment.Content);
                         comment.AvatarUrl = await client.FetchAvatarFromGithub(_logger, comment.GithubOrEmail);
-
+                        comment.GithubOrEmail = null;
                         pageInDb.Comments.Add(comment);
                     }
 
