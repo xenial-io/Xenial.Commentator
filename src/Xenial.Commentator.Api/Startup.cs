@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -11,6 +12,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
+using Xenial.Commentator.Api.Controllers;
+using Xenial.Commentator.BackgroundWorkers;
+using Xenial.Commentator.Model;
 
 namespace Xenial.Commentator.Api
 {
@@ -26,7 +30,10 @@ namespace Xenial.Commentator.Api
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-
+            services.AddHostedService<PushChangesWorker>();
+            services.AddHttpClient(nameof(PushChangesWorker));
+            services.AddHttpClient(nameof(CommentsController));
+            services.AddSingleton<ConcurrentQueue<Page>>();
             services.AddControllers();
             services.AddSwaggerGen(c =>
             {
