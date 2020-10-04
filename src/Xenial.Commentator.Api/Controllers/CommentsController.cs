@@ -81,7 +81,7 @@ namespace Xenial.Commentator.Api.Controllers
             page.Comments.Add(new Comment
             {
                 AvatarUrl = avatarUrl,
-                Content = StringHelper.StripMarkdownTags(pageInput.Content),
+                Content = CommonMark.CommonMarkConverter.Convert(StringHelper.StripMarkdownTags(pageInput.Content)),
                 Name = pageInput.Name,
                 Date = DateTime.Now,
                 Homepage = pageInput.Homepage,
