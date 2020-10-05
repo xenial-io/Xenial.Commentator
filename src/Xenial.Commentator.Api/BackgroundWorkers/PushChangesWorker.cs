@@ -7,12 +7,16 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+
 using Appy.GitDb.Core.Interfaces;
 using Appy.GitDb.Core.Model;
 using Appy.GitDb.Local;
+
 using LibGit2Sharp;
+
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+
 using Xenial.Commentator.Api.Model;
 using Xenial.Commentator.Helpers;
 using Xenial.Commentator.Model;
@@ -25,9 +29,10 @@ namespace Xenial.Commentator.BackgroundWorkers
         private Timer _timer;
         private ConcurrentQueue<Page> _queue;
         private IHttpClientFactory _httpClientFactory;
+        private Lazy<string> repositoryLocation;
 
         public PushChangesWorker(ILogger<PushChangesWorker> logger, ConcurrentQueue<Page> queue, IHttpClientFactory httpClientFactory)
-            => (_logger, _queue, _httpClientFactory) = (logger, queue, httpClientFactory);
+            => (_logger, _queue, _httpClientFactory, repositoryLocation) = (logger, queue, httpClientFactory, new Lazy<string>(() => CloneRepository()));
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
@@ -38,7 +43,7 @@ namespace Xenial.Commentator.BackgroundWorkers
             return Task.CompletedTask;
         }
 
-        private Lazy<string> RepositoryLocation = new Lazy<string>(() =>
+        private string CloneRepository()
         {
             var dir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
 
@@ -48,17 +53,17 @@ namespace Xenial.Commentator.BackgroundWorkers
             });
 
             return repoPath;
-        });
+        }
+
         private readonly string branchName = "master";
 
         private async void DoWork(object state)
         {
-            var hasChanges = false;
             if (_queue.TryDequeue(out var page))
             {
                 try
                 {
-                    using IGitDb db = new LocalGitDb(RepositoryLocation.Value);
+                    using IGitDb db = new LocalGitDb(repositoryLocation.Value);
                     var id = page.Id.TrimStart('/');
                     var key = $"comments/{id}";
                     var pageInDb = await db.Get<Page>(branchName, key);
@@ -74,7 +79,7 @@ namespace Xenial.Commentator.BackgroundWorkers
                         comment.Content = StringHelper.StripMarkdownTags(comment.Content);
                         comment.AvatarUrl = await client.FetchAvatarFromGithub(_logger, comment.GithubOrEmail);
                         comment.GithubOrEmail = null;
-                        if(string.IsNullOrWhiteSpace(comment.Homepage))
+                        if (string.IsNullOrWhiteSpace(comment.Homepage))
                         {
                             comment.Homepage = null;
                         }
@@ -86,20 +91,8 @@ namespace Xenial.Commentator.BackgroundWorkers
                         Key = key,
                         Value = pageInDb
                     }, new Author("Manuel Grundner", "m.grundner@delegate.at"));
-                    hasChanges = true;
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError("Could not commit comment in {page} {ex}", page, ex);
-                    _queue.Enqueue(page);
-                }
-            }
 
-            if (hasChanges)
-            {
-                try
-                {
-                    using var repo = new Repository(RepositoryLocation.Value);
+                    using var repo = new Repository(repositoryLocation.Value);
 
                     var creds = new UsernamePasswordCredentials
                     {
@@ -112,9 +105,16 @@ namespace Xenial.Commentator.BackgroundWorkers
                     options.CredentialsProvider = (_url, _user, _cred) => creds;
                     repo.Network.Push(remote, @"refs/heads/master", options);
                 }
+                catch (NonFastForwardException ex)
+                {
+                    _logger.LogWarning("Could not push changes cause there is a non fast forward. Clone the repo and try again. {page} {ex}", page, ex);
+                    repositoryLocation = new Lazy<string>(() => CloneRepository());
+                    _queue.Enqueue(page);
+                }
                 catch (Exception ex)
                 {
-                    _logger.LogError("Could not push changes {ex}", ex);
+                    _logger.LogError("Could not commit comment in {page} {ex}", page, ex);
+                    _queue.Enqueue(page);
                 }
             }
         }
