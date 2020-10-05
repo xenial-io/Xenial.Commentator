@@ -27,11 +27,11 @@ namespace Xenial.Commentator.BackgroundWorkers
     {
         private readonly ILogger<PushChangesWorker> _logger;
         private Timer _timer;
-        private ConcurrentQueue<Page> _queue;
+        private ConcurrentQueue<PageWorkModel> _queue;
         private IHttpClientFactory _httpClientFactory;
         private Lazy<string> repositoryLocation;
 
-        public PushChangesWorker(ILogger<PushChangesWorker> logger, ConcurrentQueue<Page> queue, IHttpClientFactory httpClientFactory)
+        public PushChangesWorker(ILogger<PushChangesWorker> logger, ConcurrentQueue<PageWorkModel> queue, IHttpClientFactory httpClientFactory)
             => (_logger, _queue, _httpClientFactory, repositoryLocation) = (logger, queue, httpClientFactory, new Lazy<string>(() => CloneRepository()));
 
         public Task StartAsync(CancellationToken cancellationToken)
@@ -74,17 +74,16 @@ namespace Xenial.Commentator.BackgroundWorkers
                     }
                     var client = _httpClientFactory.CreateClient(nameof(PushChangesWorker));
 
-                    foreach (var comment in page.Comments)
+
+                    page.Comment.Content = StringHelper.StripMarkdownTags(page.Comment.Content);
+                    page.Comment.AvatarUrl = await client.FetchAvatarFromGithub(_logger, page.Comment.GithubOrEmail);
+                    page.Comment.GithubOrEmail = null;
+                    if (string.IsNullOrWhiteSpace(page.Comment.Homepage))
                     {
-                        comment.Content = StringHelper.StripMarkdownTags(comment.Content);
-                        comment.AvatarUrl = await client.FetchAvatarFromGithub(_logger, comment.GithubOrEmail);
-                        comment.GithubOrEmail = null;
-                        if (string.IsNullOrWhiteSpace(comment.Homepage))
-                        {
-                            comment.Homepage = null;
-                        }
-                        pageInDb.Comments.Add(comment);
+                        page.Comment.Homepage = null;
                     }
+                    pageInDb.Comments.Add(page.Comment);
+
 
                     await db.Save(branchName, $"feat: new comment in {page.Id}", new Document<Page>
                     {

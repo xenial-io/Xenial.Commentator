@@ -16,10 +16,10 @@ namespace Xenial.Commentator.Api.Controllers
     public class CommentsController : ControllerBase
     {
         private readonly ILogger<CommentsController> _logger;
-        private readonly ConcurrentQueue<Page> _queue;
+        private readonly ConcurrentQueue<PageWorkModel> _queue;
         private readonly IHttpClientFactory _httpClientFactory;
 
-        public CommentsController(ILogger<CommentsController> logger, ConcurrentQueue<Page> queue, IHttpClientFactory httpClientFactory)
+        public CommentsController(ILogger<CommentsController> logger, ConcurrentQueue<PageWorkModel> queue, IHttpClientFactory httpClientFactory)
             => (_logger, _queue, _httpClientFactory) = (logger, queue, httpClientFactory);
 
         [HttpPost]
@@ -41,20 +41,18 @@ namespace Xenial.Commentator.Api.Controllers
                 return BadRequest("Captcha is wrong");
             }
 
-            _queue.Enqueue(new Page
+            _queue.Enqueue(new PageWorkModel
             {
                 Id = pageInput.Id,
-                Comments =
+                InReplyTo = pageInput.InReplyTo,
+                Comment = new Comment
                 {
-                    new Comment
-                    {
-                        Content = StringHelper.StripMarkdownTags(pageInput.Content),
-                        GithubOrEmail = pageInput.GithubOrEmail,
-                        Name = string.IsNullOrWhiteSpace(pageInput.Name) ? null : pageInput.Name.Trim(),
-                        Homepage = string.IsNullOrWhiteSpace(pageInput.Homepage) ? null : pageInput.Homepage.Trim(),
-                        Date = DateTime.Now,
-                    }
-                }
+                    Content = StringHelper.StripMarkdownTags(pageInput.Content),
+                    GithubOrEmail = pageInput.GithubOrEmail,
+                    Name = string.IsNullOrWhiteSpace(pageInput.Name) ? null : pageInput.Name.Trim(),
+                    Homepage = string.IsNullOrWhiteSpace(pageInput.Homepage) ? null : pageInput.Homepage.Trim(),
+                    Date = DateTime.Now,
+                }               
             });
 
             return await Preview(pageInput);
@@ -140,5 +138,6 @@ namespace Xenial.Commentator.Api.Controllers
         public string Operation { get; set; }
         [Required]
         public int Answer { get; set; }
+        public string InReplyTo { get; set; }
     }
 }

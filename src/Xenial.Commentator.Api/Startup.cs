@@ -33,7 +33,7 @@ namespace Xenial.Commentator.Api
             services.AddHostedService<PushChangesWorker>();
             services.AddHttpClient(nameof(PushChangesWorker));
             services.AddHttpClient(nameof(CommentsController));
-            services.AddSingleton<ConcurrentQueue<Page>>();
+            services.AddSingleton<ConcurrentQueue<PageWorkModel>>();
             services.AddCors();
             services.AddControllers();
             services.AddSwaggerGen(c =>
