@@ -1,10 +1,10 @@
 using System;
+using System.Collections;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
-using System.Net.Http.Json;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -17,7 +17,7 @@ using LibGit2Sharp;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-using Xenial.Commentator.Api.Model;
+using Xenial.Commentator.Api.Helpers;
 using Xenial.Commentator.Helpers;
 using Xenial.Commentator.Model;
 
@@ -74,7 +74,7 @@ namespace Xenial.Commentator.BackgroundWorkers
                     }
                     var client = _httpClientFactory.CreateClient(nameof(PushChangesWorker));
 
-
+                    page.Comment.Id = CryptoRandom.CreateUniqueId();
                     page.Comment.Content = StringHelper.StripMarkdownTags(page.Comment.Content);
                     page.Comment.AvatarUrl = await client.FetchAvatarFromGithub(_logger, page.Comment.GithubOrEmail);
                     page.Comment.GithubOrEmail = null;
@@ -82,8 +82,23 @@ namespace Xenial.Commentator.BackgroundWorkers
                     {
                         page.Comment.Homepage = null;
                     }
-                    pageInDb.Comments.Add(page.Comment);
 
+                    if (string.IsNullOrEmpty(page.InReplyTo))
+                    {
+                        pageInDb.Comments.Add(page.Comment);
+                    }
+                    else
+                    {
+                        var commentToReplyTo = Flatten(pageInDb).FirstOrDefault(c => c.Id == page.InReplyTo);
+                        if(commentToReplyTo != null)
+                        {
+                            commentToReplyTo.Comments.Add(page.Comment);
+                        }
+                        else //In case we just don't find it, add it to the page instead.
+                        {
+                            pageInDb.Comments.Add(page.Comment);
+                        }
+                    }
 
                     await db.Save(branchName, $"feat: new comment in {page.Id}", new Document<Page>
                     {
@@ -128,5 +143,25 @@ namespace Xenial.Commentator.BackgroundWorkers
         }
 
         public void Dispose() => _timer?.Dispose();
+
+        IEnumerable<Comment> Flatten(Comment comment)
+        {
+            foreach (var comment2 in comment.Comments)
+            {
+                yield return comment2;
+            }
+        }
+
+        IEnumerable<Comment> Flatten(Page page)
+        {
+            foreach (var comment in page.Comments)
+            {
+                foreach (var comment2 in Flatten(comment))
+                {
+                    yield return comment2;
+                }
+                yield return comment;
+            }
+        }
     }
 }
