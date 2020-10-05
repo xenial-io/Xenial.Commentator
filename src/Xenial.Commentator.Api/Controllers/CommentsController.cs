@@ -1,15 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using Appy.GitDb;
-using Appy.GitDb.Local;
-using Appy.GitDb.Core.Interfaces;
-using Appy.GitDb.Core.Model;
-using LibGit2Sharp;
-using System.IO;
 using Xenial.Commentator.Model;
 using System.Collections.Concurrent;
 using System.Net.Http;
@@ -36,14 +28,18 @@ namespace Xenial.Commentator.Api.Controllers
         public async Task<IActionResult> Post([FromBody] PageInputModel pageInput)
         {
             if (string.IsNullOrEmpty(pageInput.Operation) || (pageInput.Operation != "+" && pageInput.Operation != "-"))
+            {
                 return BadRequest("Wrong captcha operation");
+            }
 
             var answer = pageInput.Operation == "+"
                 ? pageInput.A + pageInput.B
                 : pageInput.A - pageInput.B;
 
             if (answer != pageInput.Answer)
+            {
                 return BadRequest("Captcha is wrong");
+            }
 
             _queue.Enqueue(new Page
             {
@@ -54,8 +50,8 @@ namespace Xenial.Commentator.Api.Controllers
                     {
                         Content = StringHelper.StripMarkdownTags(pageInput.Content),
                         GithubOrEmail = pageInput.GithubOrEmail,
-                        Name = pageInput.Name,
-                        Homepage = pageInput.Homepage,
+                        Name = string.IsNullOrWhiteSpace(pageInput.Name) ? null : pageInput.Name.Trim(),
+                        Homepage = string.IsNullOrWhiteSpace(pageInput.Homepage) ? null : pageInput.Homepage.Trim(),
                         Date = DateTime.Now,
                     }
                 }
@@ -82,9 +78,9 @@ namespace Xenial.Commentator.Api.Controllers
             {
                 AvatarUrl = avatarUrl,
                 Content = CommonMark.CommonMarkConverter.Convert(StringHelper.StripMarkdownTags(pageInput.Content)),
-                Name = pageInput.Name,
+                Name = string.IsNullOrWhiteSpace(pageInput.Name) ? null : pageInput.Name.Trim(),
+                Homepage = string.IsNullOrWhiteSpace(pageInput.Homepage) ? null : pageInput.Homepage.Trim(),
                 Date = DateTime.Now,
-                Homepage = pageInput.Homepage,
             });
 
             return Ok(page);
