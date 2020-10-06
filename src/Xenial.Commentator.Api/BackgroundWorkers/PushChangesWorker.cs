@@ -77,47 +77,55 @@ namespace Xenial.Commentator.BackgroundWorkers
                     page.Comment.Id = CryptoRandom.CreateUniqueId();
                     page.Comment.Content = StringHelper.StripMarkdownTags(page.Comment.Content);
                     page.Comment.AvatarUrl = await client.FetchAvatarFromGithub(_logger, page.Comment.GithubOrEmail);
-                    page.Comment.GithubOrEmail = null;
-                    if (string.IsNullOrWhiteSpace(page.Comment.Homepage))
+                    var githubOrEmail = page.Comment.GithubOrEmail;
+                    try
                     {
-                        page.Comment.Homepage = null;
-                    }
-
-                    if (string.IsNullOrEmpty(page.InReplyTo))
-                    {
-                        pageInDb.Comments.Add(page.Comment);
-                    }
-                    else
-                    {
-                        var commentToReplyTo = Flatten(pageInDb).FirstOrDefault(c => c.Id == page.InReplyTo);
-                        if(commentToReplyTo != null)
+                        page.Comment.GithubOrEmail = null;
+                        if (string.IsNullOrWhiteSpace(page.Comment.Homepage))
                         {
-                            commentToReplyTo.Comments.Add(page.Comment);
+                            page.Comment.Homepage = null;
                         }
-                        else //In case we just don't find it, add it to the page instead.
+
+                        if (string.IsNullOrEmpty(page.InReplyTo))
                         {
                             pageInDb.Comments.Add(page.Comment);
                         }
+                        else
+                        {
+                            var commentToReplyTo = Flatten(pageInDb).FirstOrDefault(c => c.Id == page.InReplyTo);
+                            if (commentToReplyTo != null)
+                            {
+                                commentToReplyTo.Comments.Add(page.Comment);
+                            }
+                            else //In case we just don't find it, add it to the page instead.
+                            {
+                                pageInDb.Comments.Add(page.Comment);
+                            }
+                        }
+
+                        await db.Save(branchName, $"feat: new comment in {page.Id}", new Document<Page>
+                        {
+                            Key = key,
+                            Value = pageInDb
+                        }, new Author("Manuel Grundner", "m.grundner@delegate.at"));
+
+                        using var repo = new Repository(repositoryLocation.Value);
+
+                        var creds = new UsernamePasswordCredentials
+                        {
+                            Username = Environment.GetEnvironmentVariable("GITHUB_API_KEY"),
+                            Password = string.Empty
+                        };
+
+                        var remote = repo.Network.Remotes["origin"];
+                        var options = new PushOptions();
+                        options.CredentialsProvider = (_url, _user, _cred) => creds;
+                        repo.Network.Push(remote, @"refs/heads/master", options);
                     }
-
-                    await db.Save(branchName, $"feat: new comment in {page.Id}", new Document<Page>
+                    finally
                     {
-                        Key = key,
-                        Value = pageInDb
-                    }, new Author("Manuel Grundner", "m.grundner@delegate.at"));
-
-                    using var repo = new Repository(repositoryLocation.Value);
-
-                    var creds = new UsernamePasswordCredentials
-                    {
-                        Username = Environment.GetEnvironmentVariable("GITHUB_API_KEY"),
-                        Password = string.Empty
-                    };
-
-                    var remote = repo.Network.Remotes["origin"];
-                    var options = new PushOptions();
-                    options.CredentialsProvider = (_url, _user, _cred) => creds;
-                    repo.Network.Push(remote, @"refs/heads/master", options);
+                        page.Comment.GithubOrEmail = githubOrEmail;
+                    }
                 }
                 catch (NonFastForwardException ex)
                 {
