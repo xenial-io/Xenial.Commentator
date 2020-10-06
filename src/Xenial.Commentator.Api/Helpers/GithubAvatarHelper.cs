@@ -13,7 +13,7 @@ using Xenial.Commentator.Api.Model;
 
 namespace Xenial.Commentator.Helpers
 {
-    public static class GithubAvatarHelper
+    public static class GithubAvatarHelper //TODO: Cache Avatars
     {
         public static async Task<string> FetchAvatarFromGithub(this HttpClient client, ILogger _logger, string githubOrEmail)
         {

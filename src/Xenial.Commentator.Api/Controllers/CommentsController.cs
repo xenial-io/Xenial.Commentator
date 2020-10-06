@@ -90,8 +90,8 @@ namespace Xenial.Commentator.Api.Controllers
         {
             var random = new Random();
 
-            var a = random.Next(10);
-            var b = random.Next(10);
+            var a = random.Next(9) + 1;
+            var b = random.Next(9) + 1;
             a = a >= b ? a : b;
             b = a >= b ? b : a;
 
