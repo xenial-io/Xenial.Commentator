@@ -133,7 +133,7 @@ namespace Xenial.Commentator.BackgroundWorkers
                         var remote = repo.Network.Remotes["origin"];
                         var options = new PushOptions();
                         options.CredentialsProvider = (_url, _user, _cred) => creds;
-                        repo.Network.Push(remote, @"refs/heads/master", options);
+                        repo.Network.Push(remote, $@"refs/heads/{branchName}", options);
                     }
                     finally
                     {
