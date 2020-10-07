@@ -27,20 +27,6 @@ namespace Xenial.Commentator.Api.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> Post([FromBody] PageInputModel pageInput)
         {
-            if (string.IsNullOrEmpty(pageInput.Operation) || (pageInput.Operation != "+" && pageInput.Operation != "-"))
-            {
-                return BadRequest("Wrong captcha operation");
-            }
-
-            var answer = pageInput.Operation == "+"
-                ? pageInput.A + pageInput.B
-                : pageInput.A - pageInput.B;
-
-            if (answer != pageInput.Answer)
-            {
-                return BadRequest("Captcha is wrong");
-            }
-
             _queue.Enqueue(new PageWorkModel
             {
                 Id = pageInput.Id,
@@ -135,9 +121,47 @@ namespace Xenial.Commentator.Api.Controllers
         [Required]
         public int B { get; set; }
         [Required]
+        [ValidateOperation]
         public string Operation { get; set; }
         [Required]
+        [CheckCaptcha]
         public int Answer { get; set; }
         public string InReplyTo { get; set; }
+    }
+
+    public class ValidateOperationAttribute : ValidationAttribute
+    {
+        protected override ValidationResult IsValid(object value,
+            ValidationContext validationContext)
+        {
+            var pageInput = (PageInputModel)validationContext.ObjectInstance;
+
+            if (string.IsNullOrEmpty(pageInput.Operation) || (pageInput.Operation != "+" && pageInput.Operation != "-"))
+            {
+                return new ValidationResult("Operation is out of range. Only can be + or -");
+            }
+
+            return ValidationResult.Success;
+        }
+    }
+
+    public class CheckCaptchaAttribute : ValidationAttribute
+    {
+        protected override ValidationResult IsValid(object value,
+            ValidationContext validationContext)
+        {
+            var pageInput = (PageInputModel)validationContext.ObjectInstance;
+
+            var answer = pageInput.Operation == "+"
+                ? pageInput.A + pageInput.B
+                : pageInput.A - pageInput.B;
+
+            if (answer != pageInput.Answer)
+            {
+                return new ValidationResult("Captcha is wrong");
+            }
+
+            return ValidationResult.Success;
+        }
     }
 }
