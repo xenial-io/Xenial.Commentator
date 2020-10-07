@@ -14,6 +14,7 @@ using Appy.GitDb.Local;
 
 using LibGit2Sharp;
 
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -26,14 +27,27 @@ namespace Xenial.Commentator.BackgroundWorkers
     public class PushChangesWorker : IHostedService, IDisposable
     {
         private readonly ILogger<PushChangesWorker> _logger;
-        private Timer _timer;
-        private ConcurrentQueue<PageWorkModel> _queue;
-        private IHttpClientFactory _httpClientFactory;
-        private Lazy<string> repositoryLocation;
-        private GithubAvatarHelper _githubAvatarHelper;
+        private readonly ConcurrentQueue<PageWorkModel> _queue;
+        private readonly IHttpClientFactory _httpClientFactory;
+        private readonly GithubAvatarHelper _githubAvatarHelper;
+        private readonly IConfiguration _configuration;
 
-        public PushChangesWorker(ILogger<PushChangesWorker> logger, ConcurrentQueue<PageWorkModel> queue, IHttpClientFactory httpClientFactory, GithubAvatarHelper githubAvatarHelper)
-            => (_logger, _queue, _httpClientFactory, repositoryLocation, _githubAvatarHelper) = (logger, queue, httpClientFactory, new Lazy<string>(() => CloneRepository()), githubAvatarHelper);
+        private Timer _timer;
+        private Lazy<string> repositoryLocation;
+        public PushChangesWorker(
+            ILogger<PushChangesWorker> logger, 
+            ConcurrentQueue<PageWorkModel> queue, 
+            IHttpClientFactory httpClientFactory, 
+            GithubAvatarHelper githubAvatarHelper,
+            IConfiguration configuration
+            )
+            => (_logger, _queue, _httpClientFactory, repositoryLocation, _githubAvatarHelper, _configuration) 
+                = (logger, queue, httpClientFactory, new Lazy<string>(() => CloneRepository()), githubAvatarHelper, configuration);
+
+        private string repoUrl => _configuration.GetValue<string>("CommentsRepo");
+        private string branchName => _configuration.GetValue<string>("CommentsBranchName");
+        private string authorName => _configuration.GetValue<string>("CommentsAuthorName");
+        private string authorEmail => _configuration.GetValue<string>("CommentsAuthorEmail");
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
@@ -48,15 +62,13 @@ namespace Xenial.Commentator.BackgroundWorkers
         {
             var dir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
 
-            var repoPath = Repository.Clone(@"https://github.com/biohazard999/TestingDb.git", dir, new CloneOptions
+            var repoPath = Repository.Clone(repoUrl, dir, new CloneOptions
             {
                 IsBare = true
             });
 
             return repoPath;
         }
-
-        private readonly string branchName = "master";
 
         private async void DoWork(object state)
         {
@@ -108,7 +120,7 @@ namespace Xenial.Commentator.BackgroundWorkers
                         {
                             Key = key,
                             Value = pageInDb
-                        }, new Author("Manuel Grundner", "m.grundner@delegate.at"));
+                        }, new Author(authorName, authorEmail));
 
                         using var repo = new Repository(repositoryLocation.Value);
 

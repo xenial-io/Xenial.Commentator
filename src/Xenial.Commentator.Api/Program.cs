@@ -20,7 +20,11 @@ namespace Xenial.Commentator.Api
             Host.CreateDefaultBuilder(args)
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
-                    webBuilder.UseStartup<Startup>();
+                    webBuilder
+#if !DEBUG
+                        .UseIISIntegration()
+#endif
+                        .UseStartup<Startup>();
                 });
     }
 }
