@@ -18,9 +18,10 @@ namespace Xenial.Commentator.Api.Controllers
         private readonly ILogger<CommentsController> _logger;
         private readonly ConcurrentQueue<PageWorkModel> _queue;
         private readonly IHttpClientFactory _httpClientFactory;
+        private readonly GithubAvatarHelper _githubAvatarHelper;
 
-        public CommentsController(ILogger<CommentsController> logger, ConcurrentQueue<PageWorkModel> queue, IHttpClientFactory httpClientFactory)
-            => (_logger, _queue, _httpClientFactory) = (logger, queue, httpClientFactory);
+        public CommentsController(ILogger<CommentsController> logger, ConcurrentQueue<PageWorkModel> queue, IHttpClientFactory httpClientFactory, GithubAvatarHelper githubAvatarHelper)
+            => (_logger, _queue, _httpClientFactory, _githubAvatarHelper) = (logger, queue, httpClientFactory, githubAvatarHelper);
 
         [HttpPost]
         [ProducesResponseType(typeof(Page), StatusCodes.Status200OK)]
@@ -56,7 +57,7 @@ namespace Xenial.Commentator.Api.Controllers
                 Id = pageInput.Id
             };
 
-            var avatarUrl = await client.FetchAvatarFromGithub(_logger, pageInput.GithubOrEmail);
+            var avatarUrl = await _githubAvatarHelper.FetchAvatarFromGithub(client, _logger, pageInput.GithubOrEmail);
 
             page.Comments.Add(new Comment
             {

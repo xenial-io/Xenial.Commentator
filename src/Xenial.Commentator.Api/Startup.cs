@@ -14,6 +14,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
 using Xenial.Commentator.Api.Controllers;
 using Xenial.Commentator.BackgroundWorkers;
+using Xenial.Commentator.Helpers;
 using Xenial.Commentator.Model;
 
 namespace Xenial.Commentator.Api
@@ -34,6 +35,7 @@ namespace Xenial.Commentator.Api
             services.AddHttpClient(nameof(PushChangesWorker));
             services.AddHttpClient(nameof(CommentsController));
             services.AddSingleton<ConcurrentQueue<PageWorkModel>>();
+            services.AddSingleton<GithubAvatarHelper>();
             services.AddCors();
             services.AddControllers();
             services.AddSwaggerGen(c =>

@@ -30,9 +30,10 @@ namespace Xenial.Commentator.BackgroundWorkers
         private ConcurrentQueue<PageWorkModel> _queue;
         private IHttpClientFactory _httpClientFactory;
         private Lazy<string> repositoryLocation;
+        private GithubAvatarHelper _githubAvatarHelper;
 
-        public PushChangesWorker(ILogger<PushChangesWorker> logger, ConcurrentQueue<PageWorkModel> queue, IHttpClientFactory httpClientFactory)
-            => (_logger, _queue, _httpClientFactory, repositoryLocation) = (logger, queue, httpClientFactory, new Lazy<string>(() => CloneRepository()));
+        public PushChangesWorker(ILogger<PushChangesWorker> logger, ConcurrentQueue<PageWorkModel> queue, IHttpClientFactory httpClientFactory, GithubAvatarHelper githubAvatarHelper)
+            => (_logger, _queue, _httpClientFactory, repositoryLocation, _githubAvatarHelper) = (logger, queue, httpClientFactory, new Lazy<string>(() => CloneRepository()), githubAvatarHelper);
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
@@ -76,7 +77,7 @@ namespace Xenial.Commentator.BackgroundWorkers
 
                     page.Comment.Id = CryptoRandom.CreateUniqueId();
                     page.Comment.Content = StringHelper.StripMarkdownTags(page.Comment.Content);
-                    page.Comment.AvatarUrl = await client.FetchAvatarFromGithub(_logger, page.Comment.GithubOrEmail);
+                    page.Comment.AvatarUrl = await _githubAvatarHelper.FetchAvatarFromGithub(client, _logger, page.Comment.GithubOrEmail);
                     var githubOrEmail = page.Comment.GithubOrEmail;
                     try
                     {
