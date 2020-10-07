@@ -138,7 +138,7 @@ namespace Xenial.Commentator.Api.Controllers
 
             if (string.IsNullOrEmpty(pageInput.Operation) || (pageInput.Operation != "+" && pageInput.Operation != "-"))
             {
-                return new ValidationResult("Operation is out of range. Only can be + or -");
+                return new ValidationResult("Operation is out of range. Only can be + or -.");
             }
 
             return ValidationResult.Success;
@@ -158,7 +158,7 @@ namespace Xenial.Commentator.Api.Controllers
 
             if (answer != pageInput.Answer)
             {
-                return new ValidationResult("Captcha is wrong");
+                return new ValidationResult("Captcha is wrong.");
             }
 
             return ValidationResult.Success;
