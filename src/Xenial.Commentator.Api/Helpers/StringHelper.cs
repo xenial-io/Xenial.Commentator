@@ -25,7 +25,7 @@ namespace Xenial.Commentator.Helpers
             content = Regex.Replace(content, "/\\[\\^.+?\\](\\: .*?$)?/g", "");
             content = Regex.Replace(content, "/\\s{0,2}\\[.*?\\]: .*?$/g", "");
             // Images
-            content = Regex.Replace(content, "/\\!\\[.*?\\][\\[\\(].*?[\\]\\)]/g", "");
+            //content = Regex.Replace(content, "/\\!\\[.*?\\][\\[\\(].*?[\\]\\)]/g", "");
             // Links
             // content = Regex.Replace(content, "/\\[(.*?)\\][\\[\\(].*?[\\]\\)]/g", "$1");
             return content;
